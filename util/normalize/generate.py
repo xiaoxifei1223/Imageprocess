@@ -7,6 +7,10 @@
 import numpy as np
 import random
 import cv2
+import pydicom
+
+
+
 
 def lungwin_mask(image_org, mask, threshold):
 
@@ -115,7 +119,7 @@ def resolution(img):
 def grayaug(bone, target, mask, threshold):
 
     # 如果使用的是双能源骨图， 需要取反， 使用生产的骨图则不需要取反
-    #bone = inverse_bone(bone)      # 已经先进行处理
+    bone = inverse_bone(bone)      # 已经先进行处理
 
     # 使用软组织图与骨图合成图 现在target包含两部分[0]是软组织,[1]是骨组织
     newimg = generator(bone, target, mask)
@@ -152,6 +156,37 @@ def grayaug_compressed(bone, soft, mask, threshold):
     bone = lungwin_mask(soft, mask, threshold)
 
     return new_img,soft,bone
+
+
+
+def load_img(file, shape, path):
+    targetpath = os.path.join(path, file)
+    if targetpath.endswith("dcm"):
+        target_dcm = pydicom.read_file(targetpath)
+        target = removal_tag(target_dcm)
+        target = cv2.resize(target, (shape[1], shape[0]))
+        target = np.array(target, np.float)
+    elif targetpath.endswith("png"):
+        target = cv2.imread(targetpath, cv2.IMREAD_UNCHANGED)
+        if len(target.shape) > 2:
+            target = cv2.cvtColor(target, cv2.COLOR_RGB2GRAY)
+        target = cv2.resize(target, (shape[1], shape[0]))
+        target = np.array(target, np.float)
+    else:
+        raise Exception("Data format is not dcm or png")
+
+    return target
+
+
+
+
+if __name__ =="__main__":
+    path_soft = ''
+    path_bone = ''
+    path_mask = ''
+
+    shape = [512, 512]
+
 
 
 

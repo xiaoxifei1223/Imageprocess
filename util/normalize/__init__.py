@@ -5,3 +5,4 @@
 # email: haochen9212@outlook.com
 
 from .generate import *
+from .remove_tag import * 
