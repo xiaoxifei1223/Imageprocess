@@ -6,6 +6,31 @@
 # coding:utf-8
 
 import numpy as np
+import time
+import numpngw
+import cv2
+# 去标签中的image painting问题
+def regin_repair(img, pos):
+    '''
+    TODO:将标签位置补上
+    :param img: 原图
+    :param pos: 位置
+    :return:
+    '''
+    mask = np.zeros((img.shape[0], img.shape[1]), dtype=np.uint8)
+
+    for i, j in zip(pos[0], pos[1]):
+        mask[i, j] = 1
+    img = img.astype(np.uint16)
+    img_new = cv2.inpaint(img, mask, 3, cv2.INPAINT_TELEA)
+
+    return img_new
+
+
+
+
+
+
 # 去标签
 def removal_tag(ds):
 
@@ -27,44 +52,15 @@ def removal_tag(ds):
             # 白色标签阈值
             whitetag = 0
             pos = np.where(img == whitetag)
-            h, w = img.shape
-            if len(pos[0]) > 0:
-                x, y = pos[0][0], pos[1][0]
-                x0 = max(0, x-10)
-                y0 = max(0, y-10)
-                x1 = min(w, x+10)
-                y1 = min(h, y+10)
-                area = img[x0:x1,y0:y1]
-                if len(area[area > whitetag]) > 0:
-                    value = area[area > whitetag].mean()
-                else:
-                    value = img[img > whitetag].mean()
-
-                img[img == whitetag] = value
-
-            img = vmax + vmin - img
-
+            img = regin_repair(img, pos)
         else:
             # 白色标签阈值
             whitetag = pow(2, ds[0x0028, 0x0101].value) - 1
             whitetagwide = 5
 
             pos = np.where(img > (whitetag - whitetagwide))
-            h, w = img.shape
+            img = regin_repair(img, pos)
 
-            if len(pos[0]) > 0:
-                x, y = pos[0][0], pos[1][0]
-                x0 = max(0, x - 10)
-                y0 = max(0, y - 10)
-                x1 = min(w, x + 10)
-                y1 = min(h, y + 10)
-                area = img[x0:x1, y0:y1]
-                if len(area[area < (whitetag - whitetagwide)]) > 0:
-                    value = area[area < (whitetag - whitetagwide)].mean()
-                else:
-                    value = img[img < (whitetag - whitetagwide)].mean()
-
-                img[img > (whitetag - whitetagwide)] = value
 
     else:
         # 白色标签阈值
@@ -72,20 +68,9 @@ def removal_tag(ds):
         whitetagwide = 5
 
         pos = np.where(img > (whitetag - whitetagwide))
-        h, w = img.shape
-
-        if len(pos[0]) > 0:
-            x, y = pos[0][0], pos[1][0]
-            x0 = max(0, x - 10)
-            y0 = max(0, y - 10)
-            x1 = min(w, x + 10)
-            y1 = min(h, y + 10)
-            area = img[x0:x1, y0:y1]
-            if len(area[area < (whitetag - whitetagwide)]) > 0:
-                value = area[area < (whitetag - whitetagwide)].mean()
-            else:
-                value = img[img < (whitetag - whitetagwide)].mean()
-
-            img[img > (whitetag - whitetagwide)] = value
+        img = regin_repair(img, pos)
 
     return img
+
+
+

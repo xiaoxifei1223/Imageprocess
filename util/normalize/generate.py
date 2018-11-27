@@ -8,7 +8,9 @@ import numpy as np
 import random
 import cv2
 import pydicom
-
+from util.normalize.remove_tag import removal_tag
+import os
+import numpngw
 
 
 
@@ -86,10 +88,33 @@ def inverse_bone(bone):
 def generator(bone, soft, mask):
     ws = random.uniform(0.02, 0.98)
     wb = 1 - ws
+    img_min = soft.min()
+    img_max = soft.max()
 
     fsoft = nonlinearImg(soft, mask)
+    # mean_bone = bone.mean()
+    # mean_soft = soft.mean()
 
+    # if mean_soft > mean_bone:
+    #     dis = mean_soft - mean_bone
+    #     bone = bone + dis
+    # else:
+    #     dis = mean_bone - mean_soft
+    #     fsoft = fsoft + dis
+
+    # bone = normalize(bone)
+    # fsoft = normalize(fsoft)
     newsrc = bone * wb + fsoft * ws
+    # bone_test = (bone*wb)*(img_max - img_min)
+    # bone_test = bone_test.astype(np.uint16)
+    # numpngw.write_png('/home/chenhao/device/method_test_save/Normalize/test/generate_bone/' + str(i) + '.png',
+    #                   bone_test)
+    # fsoft_test = (fsoft*ws)*(img_max - img_min)
+    # fsoft_test = fsoft_test.astype(np.uint16)
+    # numpngw.write_png('/home/chenhao/device/method_test_save/Normalize/test/generate_soft/' + str(i) + '.png',
+    #                   fsoft_test)
+    newsrc = newsrc * (img_max - img_min)
+
     return newsrc
 
 
@@ -106,11 +131,11 @@ def resolution(img):
         shape = img.shape
         img =cv2.resize(img, (shape[1]//2, shape[0]//2))
         img = cv2.resize(img, (shape[1], shape[0]))
-        # else:
-        #     s = np.random.randint(3,9)
-        #     if s % 2 == 0:
-        #         s = s+1
-        #     img = cv2.GaussianBlur(img,(s,s),sigmaX=2,sigmaY=2)
+    else:
+        s = np.random.randint(3,9)
+        if s % 2 == 0:
+            s = s+1
+        img = cv2.GaussianBlur(img, (s,s), sigmaX=2, sigmaY=2)
 
     return img
 
@@ -119,7 +144,7 @@ def resolution(img):
 def grayaug(bone, target, mask, threshold):
 
     # 如果使用的是双能源骨图， 需要取反， 使用生产的骨图则不需要取反
-    bone = inverse_bone(bone)      # 已经先进行处理
+    # bone = inverse_bone(bone)      # 已经先进行处理
 
     # 使用软组织图与骨图合成图 现在target包含两部分[0]是软组织,[1]是骨组织
     newimg = generator(bone, target, mask)
@@ -129,33 +154,16 @@ def grayaug(bone, target, mask, threshold):
     newimg = lungwin_mask(newimg, mask,  threshold)
 
     # 对合成图进行分辨率增广
-    newimg = resolution(newimg)
+    # newimg = resolution(newimg)
 
     #  归一化软组织图
-    soft = lungwin_mask(target, mask, threshold)
+    # soft = lungwin_mask(target, mask, threshold)
+    img_min = target.min()
+    img_max = target.max()
 
-    return newimg, soft
+    return newimg * (img_max - img_min)
 
 
-# compressed模式下进行灰度增广
-def grayaug_compressed(bone, soft, mask, threshold):
-
-    # 使用软组织图与骨图进行合成
-    new_img = generator(bone, soft, mask)   # new_img 是合成图像
-
-    # 归一化合成图
-    new_img = lungwin_mask(new_img, mask, threshold)
-
-    # 进行分辨率增广
-    new_img = resolution(new_img)
-
-    # 归一化软组织图
-    soft = lungwin_mask(soft, mask, threshold)
-
-    # 归一化骨组织图
-    bone = lungwin_mask(soft, mask, threshold)
-
-    return new_img,soft,bone
 
 
 
@@ -164,13 +172,13 @@ def load_img(file, shape, path):
     if targetpath.endswith("dcm"):
         target_dcm = pydicom.read_file(targetpath)
         target = removal_tag(target_dcm)
-        target = cv2.resize(target, (shape[1], shape[0]))
+        target = cv2.resize(target, (shape[1], shape[0]), cv2.INTER_LANCZOS4)
         target = np.array(target, np.float)
     elif targetpath.endswith("png"):
         target = cv2.imread(targetpath, cv2.IMREAD_UNCHANGED)
         if len(target.shape) > 2:
             target = cv2.cvtColor(target, cv2.COLOR_RGB2GRAY)
-        target = cv2.resize(target, (shape[1], shape[0]))
+        target = cv2.resize(target, (shape[1], shape[0]), cv2.INTER_LANCZOS4)
         target = np.array(target, np.float)
     else:
         raise Exception("Data format is not dcm or png")
@@ -178,14 +186,44 @@ def load_img(file, shape, path):
     return target
 
 
-
+def normalize(img):
+    '''
+    TODO: 进行min-max归一化
+    :param img:
+    :return:
+    '''
+    img_min = img.min()
+    img_max = img.max()
+    img_new = (img - img_min) / (img_max - img_min)
+    return img_new
 
 if __name__ =="__main__":
-    path_soft = ''
-    path_bone = ''
-    path_mask = ''
+    path_soft = '/home/chenhao/device/method_test_save/Normalize/test/soft/'
+    path_bone = '/home/chenhao/device/method_test_save/Normalize/test/bone/'
+    path_mask = '/home/chenhao/device/method_test_save/Normalize/test/mask/'
+
+    test_path = '/home/chenhao/device/method_test_save/Normalize/test/generate_2/'
 
     shape = [512, 512]
+    num = 100
+
+    soft = load_img('X15228219.dcm', shape, path_soft)
+    bone = load_img('X15228219.dcm', shape, path_bone)
+    bone = inverse_bone(bone)
+    mask = load_img('X15228219.png', shape, path_mask)
+    #numpngw.write_png('/home/chenhao/device/method_test_save/Normalize/test/generate/bone.png', bone)
+    #soft = soft.astype(np.uint16)
+    #numpngw.write_png('/home/chenhao/device/method_test_save/Normalize/test/generate/soft.png', soft)
+
+    for i in range(num):
+        img_new= grayaug(bone, soft, mask,[0,1])
+        #print('num({}) {}, {}'.format(i, ws, wb))
+        img_new = img_new.astype(np.uint16)
+        save_path = os.path.join(test_path, str(i) + '.png')
+        numpngw.write_png(save_path, img_new)
+    print('finished')
+
+
 
 
 
