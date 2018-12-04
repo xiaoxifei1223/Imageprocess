@@ -74,12 +74,17 @@ def nonlinearImg(soft, mask):
     return newsoft
 
 
-def inverse_bone(bone):
+def inverse_bone(bone, mask):
 
     vmax = bone.max()
     vmin = bone.min()
 
     bone = vmax + vmin - bone
+
+    pos = np.where(mask == 0)
+
+    for i, ii in zip(pos[0], pos[1]):
+        bone[i, ii] = 100
 
     return bone
 
@@ -92,18 +97,8 @@ def generator(bone, soft, mask):
     img_max = soft.max()
 
     fsoft = nonlinearImg(soft, mask)
-    # mean_bone = bone.mean()
-    # mean_soft = soft.mean()
-
-    # if mean_soft > mean_bone:
-    #     dis = mean_soft - mean_bone
-    #     bone = bone + dis
-    # else:
-    #     dis = mean_bone - mean_soft
-    #     fsoft = fsoft + dis
-
-    # bone = normalize(bone)
-    # fsoft = normalize(fsoft)
+    bone = normalize(bone)
+    fsoft = normalize(fsoft)
     newsrc = bone * wb + fsoft * ws
     # bone_test = (bone*wb)*(img_max - img_min)
     # bone_test = bone_test.astype(np.uint16)
@@ -115,7 +110,7 @@ def generator(bone, soft, mask):
     #                   fsoft_test)
     newsrc = newsrc * (img_max - img_min)
 
-    return newsrc
+    return newsrc, ws, wb
 
 
 
@@ -154,14 +149,13 @@ def grayaug(bone, target, mask, threshold):
     newimg = lungwin_mask(newimg, mask,  threshold)
 
     # 对合成图进行分辨率增广
-    # newimg = resolution(newimg)
+    newimg = resolution(newimg)
 
     #  归一化软组织图
-    # soft = lungwin_mask(target, mask, threshold)
-    img_min = target.min()
-    img_max = target.max()
+    soft = lungwin_mask(target, mask, threshold)
 
-    return newimg * (img_max - img_min)
+
+    return newimg, soft
 
 
 
@@ -208,16 +202,23 @@ if __name__ =="__main__":
     num = 100
 
     soft = load_img('X15228219.dcm', shape, path_soft)
-    bone = load_img('X15228219.dcm', shape, path_bone)
-    bone = inverse_bone(bone)
+    bone = cv2.imread('/home/chenhao/device/method_test_save/Normalize/test/bone/inverse_mask.png',
+                      cv2.IMREAD_UNCHANGED)
+    #bone = load_img('X15228219.dcm', shape, path_bone)
+    # mask_inverse = cv2.imread('/home/chenhao/device/method_test_save/Normalize/test/output_mask/X15228219.tif',
+    #                           cv2.IMREAD_UNCHANGED)
+    # bone = inverse_bone(bone, mask_inverse)
+    # bone = bone.astype(np.uint16)
+    # numpngw.write_png('/home/chenhao/device/method_test_save/Normalize/test/bone/inverse_mask.png',
+    #                   bone)
     mask = load_img('X15228219.png', shape, path_mask)
     #numpngw.write_png('/home/chenhao/device/method_test_save/Normalize/test/generate/bone.png', bone)
     #soft = soft.astype(np.uint16)
     #numpngw.write_png('/home/chenhao/device/method_test_save/Normalize/test/generate/soft.png', soft)
 
     for i in range(num):
-        img_new= grayaug(bone, soft, mask,[0,1])
-        #print('num({}) {}, {}'.format(i, ws, wb))
+        img_new ,ws, wb= generator(bone, soft, mask)
+        print('num({}) {}, {}'.format(i, ws, wb))
         img_new = img_new.astype(np.uint16)
         save_path = os.path.join(test_path, str(i) + '.png')
         numpngw.write_png(save_path, img_new)

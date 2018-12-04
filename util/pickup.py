@@ -8,6 +8,7 @@ import pydicom
 import cv2
 import numpngw
 import numpy as np
+from util.normalize.remove_tag import removal_tag
 #
 # if __name__ =="__main__":
 #     path1 = '/media/chenhao/Elements/chenhao/TB_DATA/TB_png/data/'
@@ -63,7 +64,7 @@ if __name__ =="__main__":
     for file in filelists:
         dcm_path = os.path.join(path, file)
         dcm = pydicom.read_file(dcm_path)
-        img = dcm.pixel_array
+        img = removal_tag(dcm)
         img = cv2.resize(img, (512, 512))
         img = img.astype(np.uint16)
         save_img_path = os.path.join(save_root_path, file.split('.')[0] + '.png')

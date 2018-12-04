@@ -11,10 +11,10 @@ import os
 import pydicom
 import numpngw
 import numpy as np
-from util.cutClavicle import cutClavicle
-from util.pyramid import grayAdPy,getfile
-from util.common import save_png
-from util.png_dicom import png2dicom
+# from util.cutClavicle import cutClavicle
+# from util.pyramid import grayAdPy,getfile
+# from util.common import save_png
+# from util.png_dicom import png2dicom
 
 if __name__ =="__main__":
     # ## 进行多尺度灰度调整
@@ -45,9 +45,16 @@ if __name__ =="__main__":
     #     print(file)
 
     ## 将png转为dcm
-    path = '/home/chenhao/device/method_test_save/grayAd/'
-    savepath = '/home/chenhao/device/method_test_save/grayAd/result/'
-    png2dicom(path,savepathdir=savepath)
+    root_path = '/home/chenhao/device/method_test_save/Normalize/test/mask_inverse/'
+    lists = os.listdir(root_path)
+    for file in lists:
+        print(file)
+        img_path = os.path.join(root_path, file)
+        img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
+        img_save_path = img_path.split('.')[0] + '.png'
+        numpngw.write_png(img_save_path, img)
+    print('finished')
+
 
 
 
