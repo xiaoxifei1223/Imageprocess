@@ -80,7 +80,24 @@ def need_inverse(img, mask):
 
 
 
-def removal_tag(ds, mask=None):
+def regin_repair(img, pos):
+    '''
+    TODO:将标签位置补上
+    :param img: 原图
+    :param pos: 位置
+    :return:
+    '''
+    mask = np.zeros((img.shape[0], img.shape[1]), dtype=np.uint8)
+
+    for i, j in zip(pos[0], pos[1]):
+        mask[i, j] = 1
+    img = img.astype(np.uint16)
+    img_new = cv2.inpaint(img, mask, 7, cv2.INPAINT_TELEA)
+
+    return img_new
+
+# 去标签
+def removal_tag(ds):
 
     # 如果存在线形转换标签，则进行线形转换
     img = ds.pixel_array
@@ -91,87 +108,24 @@ def removal_tag(ds, mask=None):
 
 
     # 根据PresentationLUTShape 判断是否需要取反
-    needinverse = False
-    if hasattr(ds, "PresentationLUTShape") or hasattr(ds, "PhotometricInterpretation"):
+    if hasattr(ds, "PresentationLUTShape") and hasattr(ds, "PhotometricInterpretation"):
         if ds[0x2050, 0x0020].value == "INVERSE" and ds[0x0028, 0x0004].value == "MONOCHROME1":
-            if  ds[0x0028, 0x0004].value == "MONOCHROME1":
-                needinverse = True
 
+            vmin = img[img > 0].min()
+            vmax = img.max()
 
-   # needinverse = need_inverse(img, mask)
-    if needinverse:
-        vmin = img[img > 0].min()
-        vmax = img.max()
+            # 白色标签阈值
+            whitetag = 0
+            pos = np.where(img == whitetag)
+            img = regin_repair(img, pos)
+        else:
+            # 白色标签阈值
+            whitetag = pow(2, ds[0x0028, 0x0101].value) - 1
+            whitetagwide = 5
 
-        # 白色标签阈值
-        whitetag = 0
-        pos = np.where(img == whitetag)
-        h, w = img.shape
-        if len(pos[0]) > 0:
-            x, y = pos[0][0], pos[1][0]
-            x0 = max(0, x - 10)
-            y0 = max(0, y - 10)
-            x1 = min(w, x + 10)
-            y1 = min(h, y + 10)
-            area = img[x0:x1, y0:y1]
-            if len(area[area > whitetag]) > 0:
-                value = area[area > whitetag].mean()
-            else:
-                value = img[img > whitetag].mean()
+            pos = np.where(img > (whitetag - whitetagwide))
+            img = regin_repair(img, pos)
 
-            img[img == whitetag] = value
-
-        img = vmax + vmin - img
-
-    # if hasattr(ds, "PresentationLUTShape") or hasattr(ds, "PhotometricInterpretation"):
-    #
-    #     if ds[0x2050, 0x0020].value == "INVERSE" and ds[0x0028, 0x0004].value == "MONOCHROME1":
-    #     # if  ds[0x0028, 0x0004].value == "MONOCHROME1":
-    #
-    #         vmin = img[img > 0].min()
-    #         vmax = img.max()
-    #
-    #         # 白色标签阈值
-    #         whitetag = 0
-    #         pos = np.where(img == whitetag)
-    #         h, w = img.shape
-    #         if len(pos[0]) > 0:
-    #             x, y = pos[0][0], pos[1][0]
-    #             x0 = max(0, x-10)
-    #             y0 = max(0, y-10)
-    #             x1 = min(w, x+10)
-    #             y1 = min(h, y+10)
-    #             area = img[x0:x1,y0:y1]
-    #             if len(area[area > whitetag]) > 0:
-    #                 value = area[area > whitetag].mean()
-    #             else:
-    #                 value = img[img > whitetag].mean()
-    #
-    #             img[img == whitetag] = value
-    #
-    #         img = vmax + vmin - img
-    #
-    #     else:
-    #         # 白色标签阈值
-    #         whitetag = pow(2, ds[0x0028, 0x0101].value) - 1
-    #         whitetagwide = 5
-    #
-    #         pos = np.where(img > (whitetag - whitetagwide))
-    #         h, w = img.shape
-    #
-    #         if len(pos[0]) > 0:
-    #             x, y = pos[0][0], pos[1][0]
-    #             x0 = max(0, x - 10)
-    #             y0 = max(0, y - 10)
-    #             x1 = min(w, x + 10)
-    #             y1 = min(h, y + 10)
-    #             area = img[x0:x1, y0:y1]
-    #             if len(area[area < (whitetag - whitetagwide)]) > 0:
-    #                 value = area[area < (whitetag - whitetagwide)].mean()
-    #             else:
-    #                 value = img[img < (whitetag - whitetagwide)].mean()
-    #
-    #             img[img > (whitetag - whitetagwide)] = value
 
     else:
         # 白色标签阈值
@@ -179,29 +133,14 @@ def removal_tag(ds, mask=None):
         whitetagwide = 5
 
         pos = np.where(img > (whitetag - whitetagwide))
-        h, w = img.shape
-
-        if len(pos[0]) > 0:
-            x, y = pos[0][0], pos[1][0]
-            x0 = max(0, x - 10)
-            y0 = max(0, y - 10)
-            x1 = min(w, x + 10)
-            y1 = min(h, y + 10)
-            area = img[x0:x1, y0:y1]
-            if len(area[area < (whitetag - whitetagwide)]) > 0:
-                value = area[area < (whitetag - whitetagwide)].mean()
-            else:
-                value = img[img < (whitetag - whitetagwide)].mean()
-
-            img[img > (whitetag - whitetagwide)] = value
+        img = regin_repair(img, pos)
 
     return img
 
 
-
 # 测试去标签算法
 if __name__ == "__main__":
-    path = '/home/chenhao/device/Data/DicomImages/train2048/src/data/'
+    path = r"G:\Data\DicomImages\train2048\soft\X15207198.dcm"
     save_path = '/home/chenhao/device/Data/DicomImages/train512/trainA/'
     lists = os.listdir(path)
     for file in lists:

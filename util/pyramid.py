@@ -15,6 +15,7 @@ import os
 import cv2
 import png
 import pydicom
+from util.erode_dilation import enlarge_mask
 
 def read_image(filename, representation=1):
     """
@@ -721,11 +722,11 @@ def removal_tag(ds):
 
 
 if __name__ =="__main__":
-    path1 = '/data/RibRemove/dual-cxr/DicomImages/train2048/softtissue_target_dong2/data/'
-    path2 = '/data/RibRemove/dual-cxr/DicomImages/train2048/src/data/'
-    maskpath = '/data/RibRemove/dual-cxr/DicomImages/train2048/mask/data/'
+    path1 = r'G:\Data\DicomImages\train2048\soft_remove_tag'
+    path2 = r'G:\Data\DicomImages\train2048\src\data'
+    maskpath = r'G:\Data\DicomImages\train2048\mask\data'
 
-    savepath = '/data/RibRemove/dual-cxr/DicomImages/train2048/softtissue_dong2_blend/'
+    savepath = r'G:\Data\DicomImages\train2048\test_blend'
 
     lists = os.listdir(path1)
     for file in lists:
@@ -737,7 +738,10 @@ if __name__ =="__main__":
 
 
         mask = cv2.imread(os.path.join(maskpath, file.split('.dcm')[0] + '.png'), cv2.IMREAD_UNCHANGED)
+        if mask is None:
 
+            raise Exception("np mask input")
+        mask = enlarge_mask(mask, 30)
         img_new = img_blend(img1, img2, mask)
 
         dcm1.PixelData = img_new.tobytes()

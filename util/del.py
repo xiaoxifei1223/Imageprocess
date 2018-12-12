@@ -13,15 +13,25 @@ def define_del(path1,path2):
         return False
 
 
-if __name__ == "__main__":
-    path_del = '/home/chenhao/device/Data/TB_mark/data/'    # 待删掉的内容路径
-    path_refer = '/home/chenhao/device/Data/TB_mark/png_2/'   # 参考内容路径
+# if __name__ == "__main__":
+#     path_del = '/home/chenhao/device/Data/TB_mark/data/'    # 待删掉的内容路径
+#     path_refer = '/home/chenhao/device/Data/TB_mark/png_2/'   # 参考内容路径
+#
+#     lists = os.listdir(path_del)
+#     for file in lists:
+#         path1 = os.path.join(path_del, file)
+#         path2 = os.path.join(path_refer, file.split('.')[0] + '.png')
+#         need_del = define_del(path1, path2)
+#         if need_del:
+#             print(path1)
+#             os.remove(path1)r
 
+# 根据文件格式进行删除
+if __name__ =="__main__":
+    path_del = r'G:\Data\DicomImages\train2048\mask_inverse\data'
     lists = os.listdir(path_del)
     for file in lists:
-        path1 = os.path.join(path_del, file)
-        path2 = os.path.join(path_refer, file.split('.')[0] + '.png')
-        need_del = define_del(path1, path2)
-        if need_del:
-            print(path1)
-            os.remove(path1)
+        if file.endswith('.tif'):
+            img_del_path = os.path.join(path_del, file)
+            os.remove(img_del_path)
+    print('finished')

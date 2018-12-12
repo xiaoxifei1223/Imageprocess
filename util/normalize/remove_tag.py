@@ -9,6 +9,8 @@ import numpy as np
 import time
 import numpngw
 import cv2
+import pydicom
+import os
 # 去标签中的image painting问题
 def regin_repair(img, pos):
     '''
@@ -22,14 +24,9 @@ def regin_repair(img, pos):
     for i, j in zip(pos[0], pos[1]):
         mask[i, j] = 1
     img = img.astype(np.uint16)
-    img_new = cv2.inpaint(img, mask, 3, cv2.INPAINT_TELEA)
+    img_new = cv2.inpaint(img, mask, 7, cv2.INPAINT_TELEA)
 
     return img_new
-
-
-
-
-
 
 # 去标签
 def removal_tag(ds):
@@ -71,6 +68,43 @@ def removal_tag(ds):
         img = regin_repair(img, pos)
 
     return img
+
+
+def getfilesfromtxt(txtpath):
+
+    if os.path.exists(txtpath):
+        filelist = []
+        with open(txtpath,"rt") as fp:
+            files = fp.readlines()
+            for file in files:
+                fileitem = file.split("\n")[0]
+                if fileitem.endswith("dcm") or fileitem.endswith("png"):
+                    filelist.append(fileitem)
+                else:
+                    raise Exception("no png or dcm files in directory")
+
+        return filelist
+    else:
+        raise Exception("The file {} is not exist".format(txtpath))
+
+
+# 测试去标签算法是否能够有效应对情况
+if __name__ =="__main__":
+    file_path = r"G:\Data\file_bone.txt"
+    path = r'G:\Data\DicomImages\remove_tag'
+    save_root_path = r'G:\Data\DicomImages\out'
+    filelists = getfilesfromtxt(file_path)
+    for file in filelists:
+        dcm_path = os.path.join(path, file)
+        dcm = pydicom.read_file(dcm_path)
+        img = removal_tag(dcm)
+        #img = cv2.resize(img, (512, 512))
+        #img = img.astype(np.uint16)
+        save_img_path = os.path.join(save_root_path, file.split('.')[0] + '.dcm')
+       # numpngw.write_png(save_img_path, img)
+        dcm.PixelData = img.tobytes()
+        dcm.save_as(save_img_path)
+    print('finished')
 
 
 

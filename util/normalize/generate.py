@@ -14,15 +14,22 @@ import numpngw
 
 
 
-def lungwin_mask(image_org, mask, threshold):
+def lungwin_mask(image_org, mask, threshold, vthreshold=None):
 
     if mask is not None:
+        #lung_org = img_blend(image_org, img_withbone, mask)
         lung_org = image_org * mask
     else:
         lung_org = image_org
 
-    lung_org_min = lung_org[lung_org>0].min()
-    lung_org_max = lung_org.max()
+    if vthreshold is None:
+        lung_org_min = lung_org[lung_org>0].min()
+        lung_org_max = lung_org.max()
+
+        vthreshold = (lung_org_min, lung_org_max)
+    else:
+        lung_org_min = vthreshold[0]
+        lung_org_max = vthreshold[1]
 
     a_org = (threshold[1] - threshold[0]) / (lung_org_max - lung_org_min)
     b_org = (threshold[0] * lung_org_max - lung_org_min * threshold[1]) / (lung_org_max - lung_org_min)
@@ -32,7 +39,7 @@ def lungwin_mask(image_org, mask, threshold):
     image_org[image_org < threshold[0]] = threshold[0]
     image_org[image_org > threshold[1]] = threshold[1]
 
-    return image_org
+    return image_org, vthreshold
 
 
 def nonlinearImg(soft, mask):
@@ -40,6 +47,7 @@ def nonlinearImg(soft, mask):
         softtemp = soft * mask
     else:
         softtemp = soft
+
 
     vmax = softtemp[softtemp > 0].max()
     vmin = softtemp[softtemp > 0].min()
@@ -71,92 +79,57 @@ def nonlinearImg(soft, mask):
         newsoft = soft
 
 
-    return newsoft
+    return newsoft, (vmin, vmax)
 
 
-def inverse_bone(bone, mask):
+def inverse_bone(bone):
 
     vmax = bone.max()
     vmin = bone.min()
 
     bone = vmax + vmin - bone
 
-    pos = np.where(mask == 0)
+    return bone
 
+def crop_bone_body(bone, mask):
+    '''
+    TODO: 对bone的人体组织外围进行规范化处理，使得人体外的值不可能大于人体内
+    :param bone:
+    :param mask:
+    :return: new_bone
+    '''
+
+
+    pos = np.where(mask == 0)
+    #body_min = bone[pos].min()
     for i, ii in zip(pos[0], pos[1]):
         bone[i, ii] = 100
 
     return bone
 
 
-# 软组织图灰度增广
-def generator(bone, soft, mask):
-    ws = random.uniform(0.02, 0.98)
-    wb = 1 - ws
-    img_min = soft.min()
-    img_max = soft.max()
 
-    fsoft = nonlinearImg(soft, mask)
-    bone = normalize(bone)
-    fsoft = normalize(fsoft)
-    newsrc = bone * wb + fsoft * ws
-    # bone_test = (bone*wb)*(img_max - img_min)
-    # bone_test = bone_test.astype(np.uint16)
-    # numpngw.write_png('/home/chenhao/device/method_test_save/Normalize/test/generate_bone/' + str(i) + '.png',
-    #                   bone_test)
-    # fsoft_test = (fsoft*ws)*(img_max - img_min)
-    # fsoft_test = fsoft_test.astype(np.uint16)
-    # numpngw.write_png('/home/chenhao/device/method_test_save/Normalize/test/generate_soft/' + str(i) + '.png',
-    #                   fsoft_test)
-    newsrc = newsrc * (img_max - img_min)
-
-    return newsrc, ws, wb
-
-
-
-
-def resolution(img):
+def generator(bone, soft, mask, threshold, inverse_mask):
     '''
-    TODO: 对图像进行分辨率增广
-    :param img:
+    TODO: 进行generator的测试，查看测试得到的合成图是否有问题
+    :param bone:
+    :param soft:
+    :param mask:
+    :param threshold:
+    :param inverse_mask:
     :return:
     '''
-    if np.random.uniform(0,1) > 0.5 :
-        # if np.random.uniform(0.0,1.0) > 0.5:
-        shape = img.shape
-        img =cv2.resize(img, (shape[1]//2, shape[0]//2))
-        img = cv2.resize(img, (shape[1], shape[0]))
-    else:
-        s = np.random.randint(3,9)
-        if s % 2 == 0:
-            s = s+1
-        img = cv2.GaussianBlur(img, (s,s), sigmaX=2, sigmaY=2)
+    bone = crop_bone_body(bone, inverse_mask)
 
-    return img
+    ws = random.uniform(0.02, 0.98)
+    wb = 1 - ws
 
-
-# 软组织图训练灰度增广
-def grayaug(bone, target, mask, threshold):
-
-    # 如果使用的是双能源骨图， 需要取反， 使用生产的骨图则不需要取反
-    # bone = inverse_bone(bone)      # 已经先进行处理
-
-    # 使用软组织图与骨图合成图 现在target包含两部分[0]是软组织,[1]是骨组织
-    newimg = generator(bone, target, mask)
-
-
-    #  归一化合成图
-    newimg = lungwin_mask(newimg, mask,  threshold)
-
-    # 对合成图进行分辨率增广
-    newimg = resolution(newimg)
-
-    #  归一化软组织图
-    soft = lungwin_mask(target, mask, threshold)
-
-
-    return newimg, soft
-
+    # bone = inverse_bone(bone)
+    fsoft, vthreshold = nonlinearImg(soft, mask)
+    cv2.imwrite('G:/test_soft.png', fsoft.astype(np.uint16))
+    #fsoft = cv2.imwrite('G:/test_soft.png', (fsoft*65535).astype(np.uint16))
+    newsrc = (bone * (wb) + fsoft * (ws))
+    return newsrc
 
 
 
@@ -180,52 +153,32 @@ def load_img(file, shape, path):
     return target
 
 
-def normalize(img):
-    '''
-    TODO: 进行min-max归一化
-    :param img:
-    :return:
-    '''
-    img_min = img.min()
-    img_max = img.max()
-    img_new = (img - img_min) / (img_max - img_min)
-    return img_new
-
+# 测试合成图像是否正常
 if __name__ =="__main__":
-    path_soft = '/home/chenhao/device/method_test_save/Normalize/test/soft/'
-    path_bone = '/home/chenhao/device/method_test_save/Normalize/test/bone/'
-    path_mask = '/home/chenhao/device/method_test_save/Normalize/test/mask/'
-
-    test_path = '/home/chenhao/device/method_test_save/Normalize/test/generate_2/'
-
-    shape = [512, 512]
-    num = 100
-
-    soft = load_img('X15228219.dcm', shape, path_soft)
-    bone = cv2.imread('/home/chenhao/device/method_test_save/Normalize/test/bone/inverse_mask.png',
-                      cv2.IMREAD_UNCHANGED)
-    #bone = load_img('X15228219.dcm', shape, path_bone)
-    # mask_inverse = cv2.imread('/home/chenhao/device/method_test_save/Normalize/test/output_mask/X15228219.tif',
-    #                           cv2.IMREAD_UNCHANGED)
-    # bone = inverse_bone(bone, mask_inverse)
-    # bone = bone.astype(np.uint16)
-    # numpngw.write_png('/home/chenhao/device/method_test_save/Normalize/test/bone/inverse_mask.png',
-    #                   bone)
-    mask = load_img('X15228219.png', shape, path_mask)
-    #numpngw.write_png('/home/chenhao/device/method_test_save/Normalize/test/generate/bone.png', bone)
-    #soft = soft.astype(np.uint16)
-    #numpngw.write_png('/home/chenhao/device/method_test_save/Normalize/test/generate/soft.png', soft)
-
+    bone_path = r'G:\Data\DicomImages\train2048\bone_inverse_out'
+    soft_path = r'G:\Data\DicomImages\train2048\soft_remove_tag'
+    mask_inverse_path = r'G:\Data\DicomImages\train2048\mask_inverse\data'
+    save_folder_path = r'G:\method_test_save\test_compose'
+    mask = None
+    num = 2
+    lists = os.listdir(bone_path)
     for i in range(num):
-        img_new ,ws, wb= generator(bone, soft, mask)
-        print('num({}) {}, {}'.format(i, ws, wb))
-        img_new = img_new.astype(np.uint16)
-        save_path = os.path.join(test_path, str(i) + '.png')
-        numpngw.write_png(save_path, img_new)
+        for file in lists:
+            img_bone = pydicom.read_file(os.path.join(bone_path, file)).pixel_array.astype(np.uint16)
+            img_soft = pydicom.read_file(os.path.join(soft_path, file)).pixel_array.astype(np.uint16)
+            img_mask_inverse_path = os.path.join(mask_inverse_path, str(file).replace('.dcm', '.png'))
+            img_mask_inverse = cv2.imread(img_mask_inverse_path, cv2.IMREAD_UNCHANGED)
+            img_mask_inverse = cv2.resize(img_mask_inverse, (2048, 2048))
+            img_bone = cv2.resize(img_bone, (2048, 2048))
+            img_soft = cv2.resize(img_soft, (2048, 2048))
+
+            new_img = generator(img_bone, img_soft, mask, None,img_mask_inverse)
+
+            new_img = new_img.astype(np.uint16)
+            save_path = os.path.join(save_folder_path, file.split('.')[0]+'_'+str(num)+'.png')
+            cv2.imwrite(save_path, new_img)
+
     print('finished')
-
-
-
 
 
 

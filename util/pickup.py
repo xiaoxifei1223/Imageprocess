@@ -57,18 +57,19 @@ def getfilesfromtxt(txtpath):
 
 # 通过读入的file.list 来提取数据
 if __name__ =="__main__":
-    file_path = '/home/chenhao/device/Data/DicomImages/train2048/file.txt'
-    path = '/home/chenhao/device/Data/DicomImages/train2048/src/data/'
-    save_root_path = '/home/chenhao/device/method_test_save/Normalize/test/test_mask/'
+    file_path = r"G:\Data\file_bone.txt"
+    path = r'G:\Data\DicomImages\train2048\bone_inverse'
+    save_root_path = r'G:\Data\DicomImages\train2048\bone_inverse_out'
     filelists = getfilesfromtxt(file_path)
     for file in filelists:
         dcm_path = os.path.join(path, file)
         dcm = pydicom.read_file(dcm_path)
-        img = removal_tag(dcm)
-        img = cv2.resize(img, (512, 512))
-        img = img.astype(np.uint16)
-        save_img_path = os.path.join(save_root_path, file.split('.')[0] + '.png')
-        numpngw.write_png(save_img_path, img)
+        #img = removal_tag(dcm)
+        #img = cv2.resize(img, (512, 512))
+        #img = img.astype(np.uint16)
+        save_img_path = os.path.join(save_root_path, file.split('.')[0] + '.dcm')
+        #dcm.PixelData = img.tobytes()
+        dcm.save_as(save_img_path)
     print('finished')
 
 
