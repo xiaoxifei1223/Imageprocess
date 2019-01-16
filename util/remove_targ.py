@@ -140,17 +140,20 @@ def removal_tag(ds):
 
 # 测试去标签算法
 if __name__ == "__main__":
-    path = r"G:\Data\DicomImages\train2048\soft\X15207198.dcm"
-    save_path = '/home/chenhao/device/Data/DicomImages/train512/trainA/'
-    lists = os.listdir(path)
-    for file in lists:
-        print('{} is processing'.format(file))
-        dcm_path = os.path.join(path, file)
-        dcm = pydicom.read_file(dcm_path)
-        img = removal_tag(dcm)
-        img_new = cv2.resize(img, (512, 512), cv2.INTER_LANCZOS4)
-        img_new = img_new.astype(np.uint16)
-        save_name = file.split('.')[0] + '.png'
-        save_img_path = os.path.join(save_path, save_name)
-        numpngw.write_png(save_img_path, img_new)
-    print('finished')
+    # path = r"G:\Data\DicomImages\train2048\soft\X15207198.dcm"
+    # save_path = '/home/chenhao/device/Data/DicomImages/train512/trainA/'
+    # lists = os.listdir(path)
+    # for file in lists:
+    #     print('{} is processing'.format(file))
+    #     dcm_path = os.path.join(path, file)
+    #     dcm = pydicom.read_file(dcm_path)
+    #     img = removal_tag(dcm)
+    #     img_new = cv2.resize(img, (512, 512), cv2.INTER_LANCZOS4)
+    #     img_new = img_new.astype(np.uint16)
+    #     save_name = file.split('.')[0] + '.png'
+    #     save_img_path = os.path.join(save_path, save_name)
+    #     numpngw.write_png(save_img_path, img_new)
+    # print('finished')
+    dcm = pydicom.read_file(r"G:\Data\DicomImages\train2048\soft\X15207198.dcm")
+    img = removal_tag(dcm)
+    cv2.imwrite(r"G:\X15207198_soft.png", img)

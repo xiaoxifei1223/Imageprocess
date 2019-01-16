@@ -11,6 +11,9 @@ def record_name(path,savepath):
     f.close()
 
 
+
+
+
 if __name__ =="__main__":
     path = r"G:\Data\DicomImages\Rib_2_soft_data\data"
     save_path = r"G:\Data\DicomImages\Rib_2_soft_data\soft_name_list.txt"

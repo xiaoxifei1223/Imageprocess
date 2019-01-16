@@ -172,7 +172,7 @@ if __name__ =="__main__":
             img_bone = cv2.resize(img_bone, (2048, 2048))
             img_soft = cv2.resize(img_soft, (2048, 2048))
 
-            new_img = generator(img_bone, img_soft, mask, None,img_mask_inverse)
+
 
             new_img = new_img.astype(np.uint16)
             save_path = os.path.join(save_folder_path, file.split('.')[0]+'_'+str(num)+'.png')
@@ -202,3 +202,4 @@ if __name__ =="__main__":
 
 
 
+ new_img = generator(img_bone, img_soft, mask, None,img_mask_inverse)

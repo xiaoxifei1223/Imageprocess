@@ -8,7 +8,7 @@ import pydicom
 import cv2
 import numpngw
 import numpy as np
-from util.normalize.remove_tag import removal_tag
+#from util.normalize.remove_tag import removal_tag
 #
 # if __name__ =="__main__":
 #     path1 = '/media/chenhao/Elements/chenhao/TB_DATA/TB_png/data/'
@@ -57,19 +57,42 @@ def getfilesfromtxt(txtpath):
 
 # 通过读入的file.list 来提取数据
 if __name__ =="__main__":
-    file_path = r"G:\Data\file_bone.txt"
-    path = r'G:\Data\DicomImages\train2048\bone_inverse'
-    save_root_path = r'G:\Data\DicomImages\train2048\bone_inverse_out'
-    filelists = getfilesfromtxt(file_path)
-    for file in filelists:
-        dcm_path = os.path.join(path, file)
-        dcm = pydicom.read_file(dcm_path)
-        #img = removal_tag(dcm)
-        #img = cv2.resize(img, (512, 512))
-        #img = img.astype(np.uint16)
-        save_img_path = os.path.join(save_root_path, file.split('.')[0] + '.dcm')
-        #dcm.PixelData = img.tobytes()
-        dcm.save_as(save_img_path)
-    print('finished')
+   txt_path = r"/home/chenhao/home/code/ImageProcess/file.txt"
+   lists = getfilesfromtxt(txt_path)
+   save_path = r'/home/chenhao/home/code/ImageProcess/pickup/'
+   path1 = '/data/TB/TB_lyz/train/image/src/'
+   # #path2 = '/data/TB/tb-voc/dicomImages/'
+   # #path3 = '/data/TB/TB_lyz/train/image/src/'
+   count= 0
+   isMask = False
+   for file in lists:
+       img_path = os.path.join(path1, file)
+       if isMask:
+           if img_path.endswith('.dcm'):
+               img_path = img_path.split('.dcm')[0] + '.png'
+           if os.path.exists(img_path):
+               print(file)
+               count +=1
+               img_save_path = os.path.join(save_path, file.split('.dcm')[0] + '.png')
+               shutil.copy(img_path, img_save_path)
+       else:
+           if os.path.exists(img_path):
+               print(file)
+               count +=1
+               img_save_path = os.path.join(save_path, file)
+               shutil.copy(img_path, img_save_path)
+
+   print(count)
+   # path1 = '/data/TB/for _new_mask/'
+   # lists = os.listdir(path1)
+   # for file in lists:
+   #     img_path = os.path.join(path1,file)
+   #     print(img_path)
+   #     if img_path.endswith('.dcm'):
+   #         # dcm = pydicom.read_file(img_path)
+   #         # img = dcm.pixel_array
+   #         # img_new_path = img_path.split('.dcm')[0] + '.png'
+   #         # cv2.imwrite(img_new_path,img)
+   #         os.remove(img_path)
 
 
